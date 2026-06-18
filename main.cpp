@@ -1,6 +1,7 @@
-#include <iostream>
+#include "console/Console.h"
 
 int main() {
-    std::cout << "test" << std::endl;
-    return 0;
+    std::wstring test;
+    wcon >> test;
+    wcon << test[0] << " test" << '\n';
 }
