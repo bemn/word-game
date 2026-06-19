@@ -30,13 +30,9 @@ std::wstringstream Console::console_stream() {
 
 std::vector<std::wstring> Console::get_words(std::wstringstream stream) {
     std::vector<std::wstring> result;
-    while (!stream.eof()) {
-        std::wstring word;
-        stream >> word;
+    std::wstring word;
+    while (stream >> word) {
         result.push_back(word);
-    }
-    if (stream.fail()) {
-        return {};
     }
     return result;
 }

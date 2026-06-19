@@ -74,6 +74,7 @@ void Menu::run() {
     last_choice_ = 0;
     display();
     do {
+        std::cout << "> ";
         int choice = Console::read_int();
         if (choice == 0) {
             return;
