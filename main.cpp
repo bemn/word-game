@@ -69,8 +69,12 @@ int main() {
         }
     }
 
-    for (const auto word: best_list) {
-        wcon << word->word << ' ';
+    if (best_list.size() == word_strings.size()) {
+        wcon << "Possible solution:\n";
+        for (const auto word: best_list) {
+            wcon << word->word << ' ';
+        }
+    } else {
+        wcon << "Possible solution not found";
     }
-    wcon << '\n';
 }
