@@ -1,80 +1,73 @@
-#include <memory>
 #include <unordered_map>
-#include <unordered_set>
-#include <utility>
 
 #include "console/Console.h"
+#include "list/List.h"
 
-struct Word {
-    std::wstring word;
-    wchar_t start;
-    wchar_t end;
+#define FIRST_LETTER(word) word[0]
+#define LAST_LETTER(word) (word[word.size() - 1] == L'ь' ? word[word.size() - 2] : word[word.size() - 1])
 
-    explicit Word(std::wstring w) : word(std::move(w)) {
-        start = word[0];
-        end = word[word.length() - 1];
-        if (end == L'ь') {
-            end = word[word.length() - 2];
-        }
-    }
-};
-
-using WordNodeUnique = std::unique_ptr<Word>;
-using WordSet = std::unordered_set<Word *>;
-using WordMap = std::unordered_map<wchar_t, WordSet>;
-
-std::vector<Word *> build_game(
-    std::vector<Word *> current_list,
-    WordMap starts
+List build_word_seq(
+    const std::wstring &current_word,
+    std::unordered_multimap<wchar_t, std::wstring> &first_letters
 ) {
-    const Word *last = current_list[current_list.size() - 1];
-    std::vector<Word *> best_list = current_list;
-    if (starts.count(last->end) == 0 || starts.at(last->end).empty()) {
+    List best_list;
+    if (first_letters.count(LAST_LETTER(current_word)) == 0) {
+        best_list.push(current_word);
         return best_list;
     }
-    for (auto word: starts.at(last->end)) {
-        std::vector<Word *> temp_vec = current_list;
-        WordMap temp_map = starts;
-        temp_map.at(last->end).erase(word);
 
-        temp_vec.push_back(word);
-        std::vector<Word *> list = build_game(std::move(temp_vec), std::move(temp_map));
-        if (list.size() > best_list.size() && list[list.size() - 1]->end == list[0]->start) {
-            best_list = list;
+    auto [begin, end] = first_letters.equal_range(LAST_LETTER(current_word));
+    std::vector<std::wstring> candidates;
+    for (auto it = begin; it != end; ++it) {
+        candidates.push_back(it->second);
+    }
+
+    for (const auto &word: candidates) {
+        auto [b, e] = first_letters.equal_range(FIRST_LETTER(word));
+        auto found = e;
+        for (auto i = b; i != e; ++i) {
+            if (i->second == word) {
+                found = i;
+                break;
+            }
+        }
+        if (found == e) continue;
+
+        first_letters.erase(found);
+        List current_list = build_word_seq(word, first_letters);
+        first_letters.insert({FIRST_LETTER(word), word});
+
+        if (current_list.size() > best_list.size()) {
+            best_list = current_list;
         }
     }
+
+    best_list.push(current_word);
     return best_list;
 }
 
+
 int main() {
     const std::vector<std::wstring> word_strings = Console::get_words();
-    std::vector<WordNodeUnique> words;
-    WordMap words_start;
-    for (const auto &word: word_strings) {
-        auto node = std::make_unique<Word>(word);
-        words_start[node->start].insert(node.get());
-        words.push_back(std::move(node));
+
+    std::unordered_multimap<wchar_t, std::wstring> first_letters;
+
+    for (const auto &w: word_strings) {
+        first_letters.insert({FIRST_LETTER(w), w});
     }
 
-    std::vector<Word *> best_list;
-    for (auto &node: words) {
-        WordMap starts = words_start;
-        starts[node->start].erase(node.get());
-        std::vector<Word *> cur = build_game(
-            {node.get()},
-            starts
-        );
-        if (cur.size() > best_list.size()) {
-            best_list = cur;
-        }
-    }
+    const auto it = first_letters.find(FIRST_LETTER(word_strings[0]));
+    const std::wstring word = it->second;
+    first_letters.erase(it);
+    List best_list = build_word_seq(word, first_letters);
 
-    if (best_list.size() == word_strings.size()) {
+    if (best_list.size() == word_strings.size()
+        && FIRST_LETTER(best_list.top()) == LAST_LETTER(best_list.back())) {
         wcon << "Possible solution:\n";
-        for (const auto word: best_list) {
-            wcon << word->word << ' ';
+        for (const auto &w: best_list) {
+            wcon << w << ' ';
         }
     } else {
-        wcon << "Possible solution not found";
+        wcon << "Solution not found";
     }
 }

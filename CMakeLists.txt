@@ -10,4 +10,6 @@ add_executable(word_game
         console/Console.h
 
         main.cpp
+        list/List.cpp
+        list/List.h
 )
