@@ -1,73 +1,101 @@
-#include <unordered_map>
+#include <iostream>
+#include <fstream>
+#include <memory>
+#include <stdexcept>
 
 #include "console/Console.h"
-#include "list/List.h"
+#include "encoding/Encoding.h"
+#include "menu/Menu.h"
+#include "game/WordGame.h"
+#include "input/ConsoleInput.h"
+#include "input/FileInput.h"
 
-#define FIRST_LETTER(word) word[0]
-#define LAST_LETTER(word) (word[word.size() - 1] == L'ь' ? word[word.size() - 2] : word[word.size() - 1])
+static List last_result;
+static bool has_result = false;
 
-List build_word_seq(
-    const std::wstring &current_word,
-    std::unordered_multimap<wchar_t, std::wstring> &first_letters
-) {
-    List best_list;
-    if (first_letters.count(LAST_LETTER(current_word)) == 0) {
-        best_list.push(current_word);
-        return best_list;
-    }
+static void run_game(InputSource &source) {
+    try {
+        WordGame game;
+        game.load(source);
 
-    auto [begin, end] = first_letters.equal_range(LAST_LETTER(current_word));
-    std::vector<std::wstring> candidates;
-    for (auto it = begin; it != end; ++it) {
-        candidates.push_back(it->second);
-    }
+        wcon << "Loaded " << std::to_string(game.word_count()) << " words.\n";
+        wcon << "Solving...\n";
 
-    for (const auto &word: candidates) {
-        auto [b, e] = first_letters.equal_range(FIRST_LETTER(word));
-        auto found = e;
-        for (auto i = b; i != e; ++i) {
-            if (i->second == word) {
-                found = i;
-                break;
+        if (game.solve()) {
+            wcon << "Solution:\n";
+            for (const auto &w: game.result()) {
+                wcon << w << L' ';
             }
+            wcon << "\n";
+            last_result = game.result();
+            has_result = true;
+        } else {
+            wcon << "No solution exists for the given words.\n";
         }
-        if (found == e) continue;
-
-        first_letters.erase(found);
-        List current_list = build_word_seq(word, first_letters);
-        first_letters.insert({FIRST_LETTER(word), word});
-
-        if (current_list.size() > best_list.size()) {
-            best_list = current_list;
-        }
+    } catch (const std::runtime_error &e) {
+        std::cout << "Error: " << e.what() << "\n";
     }
-
-    best_list.push(current_word);
-    return best_list;
 }
 
+static void run_from_console() {
+    ConsoleInput src;
+    run_game(src);
+}
+
+static void run_from_file() {
+    std::cout << "Enter file path: ";
+    std::string path;
+    std::getline(std::cin, path);
+    try {
+        FileInput src(path);
+        run_game(src);
+    } catch (const std::runtime_error &e) {
+        std::cout << "Error: " << e.what() << "\n";
+    }
+}
+
+static void save_result() {
+    if (!has_result) {
+        std::cout << "No result to save yet. Run the game first.\n";
+        return;
+    }
+    std::cout << "Enter output file path: ";
+    std::string path;
+    std::getline(std::cin, path);
+    try {
+        std::ofstream file(path);
+        if (!file.is_open()) {
+            throw std::runtime_error("Cannot open file for writing: " + path);
+        }
+        for (const auto &w: last_result) {
+            file << Encoding::to_utf8(w) << ' ';
+        }
+        file << '\n';
+        std::cout << "Saved to " << path << "\n";
+    } catch (const std::runtime_error &e) {
+        std::cout << "Error: " << e.what() << "\n";
+    }
+}
 
 int main() {
-    const std::vector<std::wstring> word_strings = Console::get_words();
-
-    std::unordered_multimap<wchar_t, std::wstring> first_letters;
-
-    for (const auto &w: word_strings) {
-        first_letters.insert({FIRST_LETTER(w), w});
-    }
-
-    const auto it = first_letters.find(FIRST_LETTER(word_strings[0]));
-    const std::wstring word = it->second;
-    first_letters.erase(it);
-    List best_list = build_word_seq(word, first_letters);
-
-    if (best_list.size() == word_strings.size()
-        && FIRST_LETTER(best_list.top()) == LAST_LETTER(best_list.back())) {
-        wcon << "Possible solution:\n";
-        for (const auto &w: best_list) {
-            wcon << w << ' ';
-        }
-    } else {
-        wcon << "Solution not found";
-    }
+    Menu menu(
+        "Word Chain Game",
+        {
+            Item("From console", []() {
+                run_from_console();
+                Menu::wait_for_input();
+            }),
+            Item("From file", []() {
+                run_from_file();
+                Menu::wait_for_input();
+            }),
+            Item("Save last result", []() {
+                save_result();
+                Menu::wait_for_input();
+            }),
+        },
+        "Exit"
+    );
+    menu.run();
+    return 0;
 }
