@@ -13,6 +13,10 @@ public:
 
     static std::wstring to_wstring(const std::string &s) {
         std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
-        return conv.from_bytes(s);
+        try {
+            return conv.from_bytes(s);
+        } catch (const std::range_error &) {
+            return std::wstring(s.begin(), s.end());
+        }
     }
 };
