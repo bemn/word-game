@@ -21,11 +21,20 @@ void WordGame::load(InputSource &source) {
     if (words.empty()) {
         throw std::runtime_error("No words provided.");
     }
-    // filter out empty tokens
     words_.clear();
     for (const auto &w: words) {
-        if (!w.empty()) {
-            words_.push_back(w);
+        std::wstring filtered;
+        for (wchar_t c: w) {
+            if ((c >= L'a' && c <= L'z') || (c >= L'а' && c <= L'я') || c == L'ё') {
+                filtered += c;
+            } else if ((c >= L'A' && c <= L'Z')) {
+                filtered += c + (L'a' - L'A');
+            } else if ((c >= L'А' && c <= L'Я') || c == L'Ё') {
+                filtered += (c == L'Ё') ? L'ё' : (c + (L'а' - L'А'));
+            }
+        }
+        if (!filtered.empty()) {
+            words_.push_back(filtered);
         }
     }
     if (words_.empty()) {
@@ -42,7 +51,6 @@ bool WordGame::solve() {
     List best;
     for (const auto &w: words_) {
         auto range = index.equal_range(first_letter(w));
-        // find and temporarily remove this word from index
         auto found = range.second;
         for (auto it = range.first; it != range.second; ++it) {
             if (it->second == w) {

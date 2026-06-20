@@ -9,10 +9,8 @@
 
 class WordGame {
 public:
-    // Loads words from source. Throws std::runtime_error if result is empty.
     void load(InputSource &source);
 
-    // Attempts to solve. Returns false if no solution exists.
     bool solve();
 
     const List &result() const;
@@ -25,7 +23,7 @@ private:
     static wchar_t first_letter(const std::wstring &w);
     static wchar_t last_letter(const std::wstring &w);
 
-    List build_chain(
+    static List build_chain(
         const std::wstring &current,
         std::unordered_multimap<wchar_t, std::wstring> &index
     );

@@ -4,15 +4,14 @@
 #include <codecvt>
 #include <locale>
 
-class Encoding {
-public:
-    static std::string to_utf8(const std::wstring &ws) {
-        std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
+namespace Encoding {
+    inline std::string to_utf8(const std::wstring &ws) {
+        std::wstring_convert<std::codecvt_utf8<wchar_t> > conv;
         return conv.to_bytes(ws);
     }
 
-    static std::wstring to_wstring(const std::string &s) {
-        std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
+    inline std::wstring to_wstring(const std::string &s) {
+        std::wstring_convert<std::codecvt_utf8<wchar_t> > conv;
         try {
             return conv.from_bytes(s);
         } catch (const std::range_error &) {
