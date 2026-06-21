@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <windows.h>
 
 class Console {
     static std::wstring trim(const std::wstring &str);
@@ -10,6 +11,11 @@ class Console {
     static std::wstringstream console_stream();
 
 public:
+    Console() {
+        SetConsoleOutputCP(CP_UTF8);
+        SetConsoleCP(CP_UTF8);
+    }
+
     static std::vector<std::wstring> get_words(std::wstringstream stream = console_stream());
 
     static int read_int();
